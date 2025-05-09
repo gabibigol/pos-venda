@@ -1,0 +1,11 @@
+{
+    "files.autoGuessEncoding": true,
+    "files.autoSaveWhenNoErrors": true,
+    "files.autoSaveWorkspaceFilesOnly": true,
+    "files.autoSave": "onWindowChange",
+    "typescript.suggest.completeFunctionCalls": true,
+    "C_Cpp.intelliSenseMemoryLimit": 8000,
+    "git.statusLimit": 20000,
+    "github.branchProtection": false,
+    "github.gitAuthentication": false
+}

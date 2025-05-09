@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: carlim-mirao-backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - carlim-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: carlim-mirao-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER:-carlim_user}
+      - POSTGRES_PASSWORD=${DB_PASS:-carlim_password}
+      - POSTGRES_DB=${DB_NAME:-carlim_mirao_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - carlim-network
+    restart: unless-stopped
+
+networks:
+  carlim-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

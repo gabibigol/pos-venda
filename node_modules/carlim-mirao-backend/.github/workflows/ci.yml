@@ -1,0 +1,84 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: carlim_mirao
+          POSTGRES_USER: carlim_user
+          POSTGRES_PASSWORD: carlim_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U carlim_user -d carlim_mirao" --health-interval=10s --health-timeout=5s --health-retries=5
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: carlim_mirao
+      DB_USER: carlim_user
+      DB_PASSWORD: carlim_pass
+      DB_DIALECT: postgres
+      JWT_SECRET: test_secret
+      NODE_ENV: test
+      PORT: 3000
+      LOG_LEVEL: warn
+      LOG_FILE: logs/app.log
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./backend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: ./backend
+
+      - name: Run migrations
+        run: npx sequelize-cli db:migrate
+        working-directory: ./backend
+
+      - name: Run tests with coverage
+        run: npm run test:ci
+        working-directory: ./backend
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/coverage/
+
+  deploy:
+    needs: build-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Heroku
+        uses: akhileshns/heroku-deploy@v3.13.15
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          usedocker: true
+        env:
+          HD_DOCKERFILE_PATH: ./backend/Dockerfile
+          HD_APPDIR: ./backend

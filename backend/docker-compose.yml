@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: carlim-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-carlim_mirao}
+      POSTGRES_USER: ${DB_USER:-carlim_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-carlim_pass}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-carlim_user} -d ${DB_NAME:-carlim_mirao}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: carlim-backend
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${PORT:-3000}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-carlim_mirao}
+      - DB_USER=${DB_USER:-carlim_user}
+      - DB_PASSWORD=${DB_PASSWORD:-carlim_pass}
+      - DB_DIALECT=postgres
+      - JWT_SECRET=${JWT_SECRET:-default_secret_key_change_in_production}
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npx sequelize-cli db:migrate && npm start"
+volumes:
+  postgres_data:
